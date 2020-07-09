@@ -1,6 +1,8 @@
 #pragma once
+#include <array>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 #include "FrameStructure.hpp"
 #include "GfxConfiguration.hpp"
@@ -52,7 +54,6 @@ class GraphicsManager : _implements_ IRuntimeModule {
     virtual void EndShadowMap(const int32_t shadowmap,
                               const int32_t layer_index) {}
     virtual void SetShadowMaps(const Frame& frame) {}
-    virtual void DestroyShadowMap(int32_t& shadowmap) {}
 
     // skybox
     virtual void DrawSkyBox() {}
@@ -64,21 +65,22 @@ class GraphicsManager : _implements_ IRuntimeModule {
                                     const uint32_t height) {
         return 0;
     }
+    virtual void ReleaseTexture(int32_t texture) {}
     virtual void BeginRenderToTexture(int32_t& context, const int32_t texture,
                                       const uint32_t width,
                                       const uint32_t height) {}
     virtual void EndRenderToTexture(int32_t& context) {}
 
-    virtual int32_t GenerateAndBindTextureForWrite(const char* id,
-                                                   const uint32_t slot_index,
-                                                   const uint32_t width,
-                                                   const uint32_t height) {
-        return 0;
-    }
+    virtual void GenerateTextureForWrite(const char* id,
+                                            const uint32_t width,
+                                            const uint32_t height) {}
+
+    virtual void BindTextureForWrite(const char* id,
+                                     const uint32_t slot_index) {}
     virtual void Dispatch(const uint32_t width, const uint32_t height,
                           const uint32_t depth) {}
 
-    virtual int32_t GetTexture(const char* id) { return 0; }
+    virtual int32_t GetTexture(const char* id);
 
     virtual void DrawFullScreenQuad() {}
 
@@ -128,15 +130,15 @@ class GraphicsManager : _implements_ IRuntimeModule {
     virtual void BeginPass() {}
     virtual void EndPass() {}
 
+    virtual void BeginCompute() {}
+    virtual void EndCompute() {}
+
    protected:
     virtual void BeginScene(const Scene& scene);
     virtual void EndScene();
 
     virtual void BeginFrame(const Frame& frame);
     virtual void EndFrame(const Frame& frame);
-
-    virtual void BeginCompute() {}
-    virtual void EndCompute() {}
 
     virtual void initializeGeometries(const Scene& scene) {}
     virtual void initializeSkyBox(const Scene& scene) {}
@@ -154,12 +156,15 @@ class GraphicsManager : _implements_ IRuntimeModule {
     void UpdateConstants();
 
    protected:
+    std::unordered_map<std::string, uint32_t> m_Textures;
+
     uint64_t m_nSceneRevision{0};
 
     uint32_t m_nFrameIndex{0};
 
-    std::vector<Frame> m_Frames;
+    std::array<Frame, GfxConfiguration::kMaxInFlightFrameCount> m_Frames;
     std::vector<std::shared_ptr<IDispatchPass>> m_InitPasses;
+    std::vector<std::shared_ptr<IDispatchPass>> m_DispatchPasses;
     std::vector<std::shared_ptr<IDrawPass>> m_DrawPasses;
 
     constexpr static float skyboxVertices[]{
